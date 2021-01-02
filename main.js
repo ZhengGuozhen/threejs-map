@@ -250,9 +250,10 @@ function world2latitude(z) {
   lat = lat * 180 / Math.PI;
   return lat;
 }
-console.log(world2latitude(-314.7));//30
-console.log(world2latitude(-504.8));//45
-console.log(world2latitude(-754.6));//60
+console.log(world2latitude(latitude2world(30)));//30
+console.log(world2latitude(latitude2world(45)));//45
+console.log(world2latitude(latitude2world(60)));//60
+console.log(world2latitude(latitude2world(85)));//85
 
 //网格
 // var gridHelper = new THREE.GridHelper(360 * LONGITUDE_X, 36, 0xff0000);
@@ -473,7 +474,7 @@ function dq() {
     //地图对齐，zoomLevel
     // 限制最大zoomLevel
     let zoomLevel = Math.log2(360.0 * (mapDomWidth) / 256.0 / (mapWidth / LONGITUDE_X));
-    console.log(zoomLevel)
+    console.log('zoomLevel', zoomLevel)
     if (zoomLevel < 5) {
       mapObject.scale.set(scale, scale, scale);
       
