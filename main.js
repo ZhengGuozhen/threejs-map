@@ -32,7 +32,11 @@ var controls;
 
 var frustumSize = 500;
 
-var cameraY = 500;
+// 初始camera高度
+var cameraY = 1000 * 10000;
+
+// map缩放时的基准值，和mapDom的宽高共同决定map css3d元素在界面上的大小
+var distanceRef = 1000;
 
 var container = document.getElementById('container');
 
@@ -55,7 +59,7 @@ function init() {
     70,
     window.innerWidth / window.innerHeight,
     0.001,
-    3000
+    999999999
   );
 
   camera.position.set(0, cameraY, 0);
@@ -207,7 +211,12 @@ function _getLngLat(poi) {
 
 
 // world坐标系下单位经度长度对应的x轴范围
-var LONGITUDE_X = 10;
+// var LONGITUDE_X = 10;
+
+// 可以通过调节LONGITUDE_X + dq()实现缩放效果
+// 可以改善之前的方法（camera controls缩放）放大到一定程度后卡顿错乱的问题
+// 需要在缩放之后重新计算object的位置
+var LONGITUDE_X = 111000;
 
 // 根据{经度}计算world坐标系下的{position.x}值
 function longitude2world(lon) {
@@ -246,7 +255,10 @@ console.log(world2latitude(-504.8));//45
 console.log(world2latitude(-754.6));//60
 
 //网格
-var gridHelper = new THREE.GridHelper(360 * LONGITUDE_X, 36, 0xff0000);
+// var gridHelper = new THREE.GridHelper(360 * LONGITUDE_X, 36, 0xff0000);
+var gridHelper = new THREE.GridHelper(100, 100, 0xff0000);
+gridHelper.position.x = longitude2world(121);
+gridHelper.position.z = latitude2world(21);
 // gridHelper.rotation.x = - Math.PI / 2;
 scene.add(gridHelper);
 
@@ -275,16 +287,21 @@ initLines(60);
 
 
 
-//测试用的小方块
-var geometry = new THREE.BoxBufferGeometry(10, 10, 10);
-var material = new THREE.MeshBasicMaterial({
-  color: 0xff0000,
-  wireframe: true,
-  wireframeLinewidth: 1,
-  side: THREE.DoubleSide
-});
-var mesh = new THREE.Mesh(geometry, material);
-// scene.add(mesh);
+// 测试用的小方块
+// 方块size 对应地图上的约1分
+for (let i = 0; i < 1000; i++) {
+  var geometry = new THREE.BoxBufferGeometry(1/3600 * LONGITUDE_X, 1/3600 * LONGITUDE_X, 1/3600 * LONGITUDE_X);
+  var material = new THREE.MeshBasicMaterial({
+    color: 0xff0000,
+    wireframe: true,
+    wireframeLinewidth: 1,
+    side: THREE.DoubleSide
+  });
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.position.x = longitude2world(121 + i * 1/3600)
+  mesh.position.z = latitude2world(21)
+  scene.add(mesh);
+}
 
 
 
@@ -433,7 +450,8 @@ function dq() {
   // console.log('center long', centerLongitude, 'center lat', centerLatitude);
   
   var distance = raycaster.ray.distanceToPlane(plane);
-  var scale = distance / cameraY;
+  
+  var scale = distance / distanceRef;
   
   var mapWidth = mapDomWidth * scale;//
   var mapHeight = mapDomHeight * scale;//
@@ -446,14 +464,21 @@ function dq() {
   && world2latitude(pos.z + mapHeight / 2) > -85) {
 
     //平移、缩放mapObject，保持css3对象在屏幕坐标系的大小不变
+    
+    //地图对齐，中心点
     mapObject.position.x = pos.x;
     mapObject.position.z = pos.z;
-    mapObject.scale.set(scale, scale, scale);
-
-    //地图对齐，通过指定中心点和zoom值对齐
-    let zoomLevel = Math.log2(360.0 * (mapDomWidth) / 256.0 / (mapWidth / LONGITUDE_X));
     map.getView().setCenter(fromLonLat([centerLongitude, centerLatitude]));
-    map.getView().setZoom(zoomLevel);
+
+    //地图对齐，zoomLevel
+    // 限制最大zoomLevel
+    let zoomLevel = Math.log2(360.0 * (mapDomWidth) / 256.0 / (mapWidth / LONGITUDE_X));
+    console.log(zoomLevel)
+    if (zoomLevel < 5) {
+      mapObject.scale.set(scale, scale, scale);
+      
+      map.getView().setZoom(zoomLevel);
+    }
 
   } else {
     //平移mapObject，x轴
@@ -497,9 +522,16 @@ function dq() {
 // camera初始位置
 camera.position.set(longitude2world(121), cameraY, latitude2world(21));
 controls.target = new THREE.Vector3(longitude2world(121), 0, latitude2world(21))
+// camera.updateProjectionMatrix ()
+// controls.update();
+
+renderer.render(scene, camera);
+renderer2.render(scene2, camera);
+
 
 //初始对齐
-// dq();//无效
-map.getView().setCenter(fromLonLat([121, 21]));
-mapObject.position.x = longitude2world(121);
-mapObject.position.z = latitude2world(21);
+// map.getView().setCenter(ol.proj.fromLonLat([121, 21]));
+// mapObject.position.x = longitude2world(121);
+// mapObject.position.z = latitude2world(21);
+// mapObject.scale.set(100, 100, 100);
+dq()
