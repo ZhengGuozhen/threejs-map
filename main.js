@@ -473,12 +473,14 @@ function dq() {
 
     //地图对齐，zoomLevel
     // 限制最大zoomLevel
-    let zoomLevel = Math.log2(360.0 * (mapDomWidth) / 256.0 / (mapWidth / LONGITUDE_X));
-    console.log('zoomLevel', zoomLevel)
-    if (zoomLevel < 5) {
+    let zoomLevel = Math.log2(
+      (360.0 * mapDomWidth) / 256.0 / (mapWidth / LONGITUDE_X)
+    );
+    if (zoomLevel < 10) {
       mapObject.scale.set(scale, scale, scale);
-      
       map.getView().setZoom(zoomLevel);
+    } else {
+      console.log("zoomLevel超过限制", zoomLevel);
     }
 
   } else {
